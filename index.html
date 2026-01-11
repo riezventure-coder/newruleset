@@ -1,10 +1,20 @@
 <script>
 let DATA_OLT = [];
 
-fetch("/excel.csv")
+// 🔹 GANTI LINK INI DENGAN LINK CSV GOOGLE SHEETS KAMU
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUzTtaRANBaWfV3cnPwGxMxdI4ZYePm3IgBsVQ8t6Ho8rBZEPU3O-ZpqdK5sQYbXHqBsaClqtzk-0y/pub?gid=0&single=true&output=csv";
+
+// LOAD DATA DARI GOOGLE SHEETS
+fetch(SHEET_URL)
   .then(res => res.text())
-  .then(csv => DATA_OLT = parseCSV(csv))
-  .catch(() => alert("Gagal load excel.csv"));
+  .then(csv => {
+    DATA_OLT = parseCSV(csv);
+    console.log("Data OLT loaded:", DATA_OLT.length);
+  })
+  .catch(err => {
+    alert("Gagal load data Google Sheets");
+    console.error(err);
+  });
 
 function parseCSV(csv) {
   const lines = csv.trim().split("\n");
@@ -33,7 +43,7 @@ function proses() {
     return;
   }
 
-  // 🔹 Ambil SERVICE ID
+  // 🔹 Ambil SERVICE ID dari text CRM
   const services = [...new Set(crmText.match(/1-[^,\s]+/g) || [])];
   if (services.length === 0) {
     alert("Service ID tidak ditemukan");
@@ -48,22 +58,21 @@ function proses() {
   );
 
   if (!olt) {
-    alert("Data IP / SLOT / PORT tidak ditemukan di CSV");
+    alert("IP / SLOT / PORT tidak ditemukan di Google Sheets");
     return;
   }
 
-  // 🔹 Pecah VLAN
+  // 🔹 Split VLAN
   const vlanArr = (olt.VLAN || "").split(",").map(v => v.trim());
   const svlanInternet = vlanArr[0] || "";
   const svlanVoice = vlanArr[1] || "";
 
-  // 🔹 Tampilkan hasil
   const tbody = document.getElementById("hasil");
   tbody.innerHTML = "";
 
   services.forEach(service => {
 
-    // SERVICE PORT (WAJIB)
+    // SERVICE PORT
     tbody.innerHTML += `
       <tr>
         <td>${olt.ID_PORT}</td>
@@ -97,8 +106,7 @@ function proses() {
       `;
     }
 
-    // IPTV → TIDAK PAKAI SVLAN
+    // IPTV → TANPA SVLAN
   });
 }
 </script>
-
