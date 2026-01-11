@@ -1,0 +1,103 @@
+<script>
+let DATA_OLT = [];
+
+fetch("excel.csv")
+  .then(res => res.text())
+  .then(csv => DATA_OLT = parseCSV(csv))
+  .catch(() => alert("Gagal load excel.csv"));
+
+function parseCSV(csv) {
+  const lines = csv.trim().split("\n");
+  const headers = lines.shift().split(",");
+
+  return lines.map(line => {
+    const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+    let obj = {};
+    headers.forEach((h, i) => {
+      obj[h.trim()] = values[i]
+        ? values[i].replace(/"/g, "").trim()
+        : "";
+    });
+    return obj;
+  });
+}
+
+function proses() {
+  const crmText = document.getElementById("crmText").value;
+  const ip = document.getElementById("ip").value.trim();
+  const slot = document.getElementById("slot").value.trim();
+  const port = document.getElementById("port").value.trim();
+
+  if (!crmText || !ip || !slot || !port) {
+    alert("Semua input wajib diisi");
+    return;
+  }
+
+  // 🔹 Ambil SERVICE ID
+  const services = [...new Set(crmText.match(/1-[^,\s]+/g) || [])];
+  if (services.length === 0) {
+    alert("Service ID tidak ditemukan");
+    return;
+  }
+
+  // 🔹 Cari data OLT
+  const olt = DATA_OLT.find(d =>
+    d.IP === ip &&
+    d.SLOT === slot &&
+    d.PORT === port
+  );
+
+  if (!olt) {
+    alert("Data IP / SLOT / PORT tidak ditemukan di CSV");
+    return;
+  }
+
+  // 🔹 Pecah VLAN
+  const vlanArr = (olt.VLAN || "").split(",").map(v => v.trim());
+  const svlanInternet = vlanArr[0] || "";
+  const svlanVoice = vlanArr[1] || "";
+
+  // 🔹 Tampilkan hasil
+  const tbody = document.getElementById("hasil");
+  tbody.innerHTML = "";
+
+  services.forEach(service => {
+
+    // SERVICE PORT (WAJIB)
+    tbody.innerHTML += `
+      <tr>
+        <td>${olt.ID_PORT}</td>
+        <td>${service}</td>
+        <td></td>
+        <td>Service_Port</td>
+      </tr>
+    `;
+
+    // INTERNET
+    if (service.includes("INTERNET") && svlanInternet) {
+      tbody.innerHTML += `
+        <tr>
+          <td>${svlanInternet}</td>
+          <td>${service}</td>
+          <td></td>
+          <td>S-Vlan</td>
+        </tr>
+      `;
+    }
+
+    // VOICE
+    if (service.includes("VOICE") && svlanVoice) {
+      tbody.innerHTML += `
+        <tr>
+          <td>${svlanVoice}</td>
+          <td>${service}</td>
+          <td></td>
+          <td>S-Vlan</td>
+        </tr>
+      `;
+    }
+
+    // IPTV → TIDAK PAKAI SVLAN
+  });
+}
+</script>
