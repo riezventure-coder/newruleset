@@ -7,17 +7,17 @@ async function processData() {
   const slot = document.getElementById("slot").value.trim();
   const port = document.getElementById("port").value.trim();
 
-  // === AMBIL SERVICE ID CRM ===
-  const serviceMap = {
-    INTERNET: "",
-    VOICE: "",
-    IPTV: ""
+  // === DETEKSI SERVICE DARI CRM ===
+  const services = {
+    INTERNET: false,
+    VOICE: false,
+    IPTV: false
   };
 
   const regex = /1-[A-Z0-9_]+_(INTERNET|VOICE|IPTV)/g;
-  let match;
-  while ((match = regex.exec(crmText)) !== null) {
-    serviceMap[match[1]] = match[0];
+  let m;
+  while ((m = regex.exec(crmText)) !== null) {
+    services[m[1]] = true;
   }
 
   // === LOAD GOOGLE SHEETS ===
@@ -36,7 +36,6 @@ async function processData() {
     IP: header.indexOf("IP"),
     SLOT: header.indexOf("SLOT"),
     PORT: header.indexOf("PORT"),
-    VLAN: header.indexOf("VLAN"),
     ID_PORT: header.indexOf("ID_PORT")
   };
 
@@ -51,36 +50,41 @@ async function processData() {
     return;
   }
 
-  const vlanRaw = olt[idx.VLAN] || "";
-  const [svlanInternet, svlanVoice] = vlanRaw.split(",").map(v => v?.trim() || "");
-
   // === OUTPUT TABLE ===
   const table = document.getElementById("result");
   table.innerHTML = `
     <tr>
-      <th>SERVICE</th>
-      <th>SERVICE_ID</th>
-      <th>ID_PORT</th>
-      <th>SVLAN</th>
+      <th>RESOURCE_ID</th>
+      <th>SERVICE_NAME</th>
+      <th>TARGET_ID</th>
+      <th>CONFIG_ITEM_NAME</th>
     </tr>
   `;
 
-  const output = [
-    ["INTERNET", serviceMap.INTERNET, olt[idx.ID_PORT], svlanInternet],
-    ["VOICE", serviceMap.VOICE, olt[idx.ID_PORT], svlanVoice],
-    ["IPTV", serviceMap.IPTV, olt[idx.ID_PORT], ""]
-  ];
+  ["INTERNET", "VOICE", "IPTV"].forEach(service => {
+    if (!services[service]) return;
 
-  output.forEach(row => {
-    if (!row[1]) return;
+    // Service_Port (selalu ada)
     table.innerHTML += `
       <tr>
-        <td>${row[0]}</td>
-        <td>${row[1]}</td>
-        <td>${row[2]}</td>
-        <td>${row[3]}</td>
+        <td>${olt[idx.ID_PORT]}</td>
+        <td>${service}</td>
+        <td></td>
+        <td>Service_Port</td>
       </tr>
     `;
+
+    // S-Vlan (hanya Internet & Voice)
+    if (service === "INTERNET" || service === "VOICE") {
+      table.innerHTML += `
+        <tr>
+          <td>${olt[idx.ID_PORT]}</td>
+          <td>${service}</td>
+          <td></td>
+          <td>S-Vlan</td>
+        </tr>
+      `;
+    }
   });
 }
 </script>
