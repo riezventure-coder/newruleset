@@ -1,7 +1,7 @@
 <script>
 let DATA_OLT = [];
 
-fetch("excel.csv")
+fetch("/excel.csv")
   .then(res => res.text())
   .then(csv => DATA_OLT = parseCSV(csv))
   .catch(() => alert("Gagal load excel.csv"));
@@ -101,3 +101,4 @@ function proses() {
   });
 }
 </script>
+
