@@ -1,112 +1,108 @@
-<script>
-let DATA_OLT = [];
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>CRM + ID PORT + SVLAN</title>
+<style>
+body { font-family: Arial; padding: 20px }
+textarea { width: 100%; height: 120px }
+input { padding: 5px; margin: 5px }
+button { padding: 10px; margin-top: 10px }
+table { border-collapse: collapse; margin-top: 20px }
+td, th { border: 1px solid #000; padding: 6px }
+</style>
+</head>
+<body>
 
-// 🔹 GANTI LINK INI DENGAN LINK CSV GOOGLE SHEETS KAMU
+<h2>CRM + ID PORT + SVLAN (Google Sheets)</h2>
+
+<textarea id="crmText" placeholder="Paste text CRM di sini"></textarea>
+
+<br>
+IP: <input id="ip">
+SLOT: <input id="slot">
+PORT: <input id="port">
+
+<br>
+<button onclick="processData()">PROSES</button>
+
+<table id="result">
+<tr>
+<th>Service</th>
+<th>Service ID</th>
+<th>ID PORT</th>
+<th>SVLAN</th>
+</tr>
+</table>
+
+<script>
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUzTtaRANBaWfV3cnPwGxMxdI4ZYePm3IgBsVQ8t6Ho8rBZEPU3O-ZpqdK5sQYbXHqBsaClqtzk-0y/pub?gid=0&single=true&output=csv";
 
-// LOAD DATA DARI GOOGLE SHEETS
-fetch(SHEET_URL)
-  .then(res => res.text())
-  .then(csv => {
-    DATA_OLT = parseCSV(csv);
-    console.log("Data OLT loaded:", DATA_OLT.length);
-  })
-  .catch(err => {
-    alert("Gagal load data Google Sheets");
-    console.error(err);
-  });
+async function processData() {
+  const crm = document.getElementById("crmText").value;
+  const ip = document.getElementById("ip").value;
+  const slot = document.getElementById("slot").value;
+  const port = document.getElementById("port").value;
 
-function parseCSV(csv) {
-  const lines = csv.trim().split("\n");
-  const headers = lines.shift().split(",");
+  // Ambil Service ID dari CRM
+  const services = crm.match(/1-[A-Z0-9_]+_(INTERNET|VOICE|IPTV)/g) || [];
 
-  return lines.map(line => {
-    const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-    let obj = {};
-    headers.forEach((h, i) => {
-      obj[h.trim()] = values[i]
-        ? values[i].replace(/"/g, "").trim()
-        : "";
-    });
-    return obj;
-  });
-}
+  // Load Google Sheets
+  const res = await fetch(SHEET_URL);
+  const text = await res.text();
+  const rows = text.split("\n").map(r => r.split(","));
 
-function proses() {
-  const crmText = document.getElementById("crmText").value;
-  const ip = document.getElementById("ip").value.trim();
-  const slot = document.getElementById("slot").value.trim();
-  const port = document.getElementById("port").value.trim();
+  const header = rows[0];
+  const data = rows.slice(1);
 
-  if (!crmText || !ip || !slot || !port) {
-    alert("Semua input wajib diisi");
-    return;
-  }
+  const idx = {
+    IP: header.indexOf("IP"),
+    SLOT: header.indexOf("SLOT"),
+    PORT: header.indexOf("PORT"),
+    VLAN: header.indexOf("VLAN"),
+    ID_PORT: header.indexOf("ID_PORT")
+  };
 
-  // 🔹 Ambil SERVICE ID dari text CRM
-  const services = [...new Set(crmText.match(/1-[^,\s]+/g) || [])];
-  if (services.length === 0) {
-    alert("Service ID tidak ditemukan");
-    return;
-  }
-
-  // 🔹 Cari data OLT
-  const olt = DATA_OLT.find(d =>
-    d.IP === ip &&
-    d.SLOT === slot &&
-    d.PORT === port
+  const match = data.find(r =>
+    r[idx.IP] == ip &&
+    r[idx.SLOT] == slot &&
+    r[idx.PORT] == port
   );
 
-  if (!olt) {
-    alert("IP / SLOT / PORT tidak ditemukan di Google Sheets");
+  if (!match) {
+    alert("Data OLT tidak ditemukan");
     return;
   }
 
-  // 🔹 Split VLAN
-  const vlanArr = (olt.VLAN || "").split(",").map(v => v.trim());
-  const svlanInternet = vlanArr[0] || "";
-  const svlanVoice = vlanArr[1] || "";
+  const [svlanInternet, svlanVoice] = (match[idx.VLAN] || "").split(",");
 
-  const tbody = document.getElementById("hasil");
-  tbody.innerHTML = "";
+  const table = document.getElementById("result");
+  table.innerHTML = `
+    <tr>
+      <th>Service</th>
+      <th>Service ID</th>
+      <th>ID PORT</th>
+      <th>SVLAN</th>
+    </tr>
+  `;
 
-  services.forEach(service => {
+  services.forEach(s => {
+    let vlan = "";
+    if (s.includes("INTERNET")) vlan = svlanInternet || "";
+    if (s.includes("VOICE")) vlan = svlanVoice || "";
+    if (s.includes("IPTV")) vlan = "";
 
-    // SERVICE PORT
-    tbody.innerHTML += `
+    table.innerHTML += `
       <tr>
-        <td>${olt.ID_PORT}</td>
-        <td>${service}</td>
-        <td></td>
-        <td>Service_Port</td>
+        <td>${s.split("_").pop()}</td>
+        <td>${s}</td>
+        <td>${match[idx.ID_PORT]}</td>
+        <td>${vlan}</td>
       </tr>
     `;
-
-    // INTERNET
-    if (service.includes("INTERNET") && svlanInternet) {
-      tbody.innerHTML += `
-        <tr>
-          <td>${svlanInternet}</td>
-          <td>${service}</td>
-          <td></td>
-          <td>S-Vlan</td>
-        </tr>
-      `;
-    }
-
-    // VOICE
-    if (service.includes("VOICE") && svlanVoice) {
-      tbody.innerHTML += `
-        <tr>
-          <td>${svlanVoice}</td>
-          <td>${service}</td>
-          <td></td>
-          <td>S-Vlan</td>
-        </tr>
-      `;
-    }
-
-    // IPTV → TANPA SVLAN
   });
 }
 </script>
+
+</body>
+</html>
