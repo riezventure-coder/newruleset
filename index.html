@@ -2,111 +2,135 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Ruleset Generator</title>
+<title>CRM Ruleset Generator (Final)</title>
 <style>
-body { font-family: Arial; padding:20px }
-textarea { width:100%; height:120px }
-input { padding:6px; margin:5px }
-button { padding:8px 16px }
-table { border-collapse:collapse; margin-top:20px }
-th,td { border:1px solid #000; padding:6px }
+  body { font-family: Arial; padding: 20px; }
+  textarea { width: 100%; height: 120px; margin-bottom: 8px; }
+  input { padding: 6px; margin: 6px 0; width: calc(33% - 8px); }
+  button { padding: 10px 16px; margin-top: 10px; }
+  table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+  th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+  th { background-color: #ddd; }
 </style>
 </head>
 <body>
 
-<h2>Ruleset Generator (CRM + Google Sheets CSV)</h2>
+<h2>CRM Ruleset Generator</h2>
 
-<textarea id="crm" placeholder="Paste text CRM di sini"></textarea><br>
+<label><strong>Paste Text CRM:</strong></label><br>
+<textarea id="crmText" placeholder="Paste text CRM di sini"></textarea><br>
 
-IP <input id="ip" placeholder="172.24.155.4">
-SLOT <input id="slot" placeholder="1">
-PORT <input id="port" placeholder="0">
-<button onclick="proses()">PROSES</button>
+<label><strong>Input IP / SLOT / PORT:</strong></label><br>
+<input id="ip" placeholder="Contoh: 172.24.155.4">
+<input id="slot" placeholder="Contoh: 1">
+<input id="port" placeholder="Contoh: 0">
 
-<table id="out">
-<tr>
-<th>RESOURCE_ID</th>
-<th>SERVICE_NAME</th>
-<th>TARGET_ID</th>
-<th>CONFIG_ITEM_NAME</th>
-</tr>
+<br>
+<button onclick="generateRuleset()">GENERATE</button>
+
+<table id="resultTable">
+  <tr>
+    <th>RESOURCE_ID</th>
+    <th>SERVICE_NAME</th>
+    <th>TARGET_ID</th>
+    <th>CONFIG_ITEM_NAME</th>
+  </tr>
 </table>
 
 <script>
-const CSV_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vTUzTtaRANBaWfV3cnPwGxMxdI4ZYePm3IgBsVQ8t6Ho8rBZEPU3O-ZpqdK5sQYbXHqBsaClqtzk-0y/pub?output=csv";
+const API_URL = "https://script.google.com/macros/s/AKfycbzP8jhWWGpt8QygEx29yvMhVHh1L6iqxFCW90N5vUyNVFcSYgEZjm2eAbRPFRqXjGcq/exec";
 
-function proses() {
-  const crm = document.getElementById("crm").value;
+function generateRuleset() {
+  const crmText = document.getElementById("crmText").value.trim();
   const ip = document.getElementById("ip").value.trim();
   const slot = document.getElementById("slot").value.trim();
   const port = document.getElementById("port").value.trim();
+  const table = document.getElementById("resultTable");
 
-  if (!crm || !ip || !slot || !port) {
-    alert("Lengkapi semua input");
+  if (!crmText || !ip || !slot || !port) {
+    alert("Lengkapi semua input (CRM, IP, SLOT, PORT).");
     return;
   }
 
-  const service = {
-    INTERNET: crm.includes("_INTERNET"),
-    VOICE: crm.includes("_VOICE"),
-    IPTV: crm.includes("_IPTV")
+  // Deteksi layanan dari CRM
+  const services = {
+    INTERNET: crmText.includes("_INTERNET"),
+    VOICE: crmText.includes("_VOICE"),
+    IPTV: crmText.includes("_IPTV")
   };
 
-  fetch(CSV_URL)
-    .then(r => r.text())
-    .then(csv => {
-      const lines = csv.trim().split("\n");
-      const data = lines.slice(1).map(l =>
-        l.split(",").map(x => x.trim())
+  // Fetch data dari Google Apps Script API
+  fetch(API_URL)
+    .then(res => res.json())
+    .then(data => {
+      // Masing-masing baris = array nilai per kolom
+      // data[0] = header row
+      const rows = data.slice(1); // skip header
+
+      // Cari baris yang sesuai IP, SLOT, PORT
+      const match = rows.find(r =>
+        r[0]?.toString().trim() === ip &&
+        r[1]?.toString().trim() === slot &&
+        r[2]?.toString().trim() === port
       );
 
-      const row = data.find(r =>
-        r[0] === ip &&
-        r[1] === slot &&
-        r[2] === port
-      );
-
-      if (!row) {
-        alert("DATA IP / SLOT / PORT TIDAK DITEMUKAN");
+      if (!match) {
+        alert("Data OLT tidak ditemukan di Google Sheet.");
         return;
       }
 
-      const vlanArr = row[3].split(",");
-      const idPort = row[4];
+      // Ambil ID_PORT dan VLAN
+      const idPort = match[4]?.toString().trim() || "";
+      const vlanRaw = match[3]?.toString().trim() || "";
+      const vlanParts = vlanRaw.split(",").map(v => v.trim());
 
-      const svlanInternet = vlanArr[0]?.trim();
-      const svlanVoice = vlanArr[1]?.trim();
+      const svlanInternet = vlanParts[0] || "";
+      const svlanVoice = vlanParts[1] || "";
 
-      const tbl = document.getElementById("out");
-      tbl.innerHTML = `
-      <tr>
-        <th>RESOURCE_ID</th>
-        <th>SERVICE_NAME</th>
-        <th>TARGET_ID</th>
-        <th>CONFIG_ITEM_NAME</th>
-      </tr>`;
+      // Reset tabel
+      table.innerHTML = `
+        <tr>
+          <th>RESOURCE_ID</th>
+          <th>SERVICE_NAME</th>
+          <th>TARGET_ID</th>
+          <th>CONFIG_ITEM_NAME</th>
+        </tr>
+      `;
 
-      if (service.INTERNET) {
-        tbl.innerHTML += `
+      // INTERNET
+      if (services.INTERNET) {
+        table.innerHTML += `
           <tr><td>${idPort}</td><td>INTERNET</td><td></td><td>Service_Port</td></tr>
-          <tr><td>${svlanInternet}</td><td>INTERNET</td><td></td><td>S-Vlan</td></tr>`;
+        `;
+        if (svlanInternet) {
+          table.innerHTML += `
+            <tr><td>${svlanInternet}</td><td>INTERNET</td><td></td><td>S-Vlan</td></tr>
+          `;
+        }
       }
 
-      if (service.VOICE) {
-        tbl.innerHTML += `
+      // VOICE
+      if (services.VOICE) {
+        table.innerHTML += `
           <tr><td>${idPort}</td><td>VOICE</td><td></td><td>Service_Port</td></tr>
-          <tr><td>${svlanVoice}</td><td>VOICE</td><td></td><td>S-Vlan</td></tr>`;
+        `;
+        if (svlanVoice) {
+          table.innerHTML += `
+            <tr><td>${svlanVoice}</td><td>VOICE</td><td></td><td>S-Vlan</td></tr>
+          `;
+        }
       }
 
-      if (service.IPTV) {
-        tbl.innerHTML += `
-          <tr><td>${idPort}</td><td>IPTV</td><td></td><td>Service_Port</td></tr>`;
+      // IPTV
+      if (services.IPTV) {
+        table.innerHTML += `
+          <tr><td>${idPort}</td><td>IPTV</td><td></td><td>Service_Port</td></tr>
+        `;
       }
-    })
-    .catch(err => {
-      alert("Gagal load CSV Google Sheet");
+
+    }).catch(err => {
       console.error(err);
+      alert("Gagal memuat data dari Google Sheet API.");
     });
 }
 </script>
