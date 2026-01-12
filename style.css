@@ -1,0 +1,243 @@
+body {
+  font-family: Arial;
+  padding: 20px;
+}
+
+.input-container {
+    display: flex;       /* Mengaktifkan mode flexbox */
+    gap: 10px;          /* Memberikan jarak antar input */
+    margin-bottom: 20px; /* Jarak antara input dengan tabel */
+    align-items: center; /* Menyeimbangkan posisi vertikal jika tinggi berbeda */
+}
+
+input {
+    padding: 8px;       /* Membuat input lebih nyaman dilihat */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+  padding: 6px 12px;
+}
+
+#search-btn {
+    padding: 8px 15px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+#search-btn:hover {
+    background-color: #0056b3;
+}
+
+/* Styling Global */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7f6;
+    padding: 20px;
+    color: #333;
+}
+
+h2 {
+    color: #2c3e50;
+    border-left: 5px solid #3498db;
+    padding-left: 10px;
+    margin-top: 30px;
+}
+
+/* Container Tabel */
+.container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-top: 10px;
+}
+
+/* Tabel Styling */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: white;
+}
+
+th {
+    background-color: #3498db;
+    color: white;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    padding: 12px;
+}
+
+td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Input & Select di dalam Tabel */
+input[type="text"], select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box; /* Penting agar padding tidak merusak lebar */
+    transition: border 0.3s;
+}
+
+input[type="text"]:focus, select:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 5px rgba(52,152,219,0.2);
+}
+
+/* Tombol-tombol */
+.btn-group {
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-add {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.btn-add:hover { background-color: #27ae60; }
+
+.btn-download {
+    background-color: #34495e;
+    color: white;
+}
+
+.btn-download:hover { background-color: #2c3e50; }
+
+.btn-remove {
+    background-color: #e74c3c;
+    color: white;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    line-height: 30px;
+    border-radius: 50%;
+}
+
+.btn-remove:hover { background-color: #c0392b; }
+
+/* Pencarian Container */
+.input-container {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+#search-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+/* --- Tambahkan ini ke file style.css kamu --- */
+
+/* Pengaturan Dasar */
+body {
+    margin: 0;
+    padding: 15px;
+    font-family: sans-serif;
+    background-color: #f9f9f9;
+}
+
+.container {
+    overflow-x: auto; /* Memungkinkan scroll jika tabel sangat lebar */
+}
+
+/* Responsif untuk Mobile (Layar < 768px) */
+@media screen and (max-width: 768px) {
+    
+    /* Sembunyikan Header Tabel Asli */
+    thead {
+        display: none;
+    }
+
+    /* Ubah Baris Menjadi "Card" */
+    tr {
+        display: block;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Ubah Sel Menjadi Baris-Baris Kecil */
+    td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: none !important;
+        padding: 8px 5px !important;
+        text-align: right;
+        font-size: 14px;
+    }
+
+    /* Berikan Label Otomatis Menggunakan Atribut Data */
+    td::before {
+        content: attr(data-label); /* Mengambil teks dari atribut data-label */
+        font-weight: bold;
+        text-align: left;
+        flex: 1;
+        color: #555;
+    }
+
+    /* Penyesuaian Input & Select di Mobile */
+    input, select {
+        width: 60% !important; /* Agar tidak terlalu lebar di sisi kanan label */
+        font-size: 14px;
+    }
+
+    .btn-group {
+        flex-direction: column; /* Tombol jadi tumpuk atas-bawah */
+        gap: 10px;
+    }
+
+    .btn-add, .btn-download {
+        width: 100%;
+        padding: 12px;
+    }
+}
+
+.input-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.input-container input {
+    flex: 1 1 150px; /* Minimal lebar 150px, bisa membesar */
+    padding: 10px;
+}
+
+#result {
+  margin-top: 20px;
+  font-weight: bold;
+  text-align: center;
+  border-collapse: collapse;
+}
+
+#result td,
+#result th {
+  padding: 15px;
+}
