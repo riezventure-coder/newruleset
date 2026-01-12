@@ -1,31 +1,46 @@
+/*************************************************
+ * GLOBAL
+ *************************************************/
+let data = [];
 let selectedIdPort = "";
 
-/* =======================
-   LOAD & SEARCH DATA CSV
-======================= */
+/*************************************************
+ * LOAD CSV (TANPA UPLOAD MANUAL)
+ *************************************************/
 Papa.parse("data.csv", {
   download: true,
+  delimiter: ",",
   header: true,
   skipEmptyLines: true,
   complete: function (results) {
-    const data = results.data;
-    document.getElementById("search-btn").addEventListener("click", () => {
-      const IP = ip.value;
-      const SLOT = slot.value;
-      const PORT = port.value;
+    data = results.data;
 
-      const filtered = data.filter(d =>
-        d.IP === IP && d.SLOT === SLOT && d.PORT === PORT
-      );
-
-      renderTable(filtered);
-    });
-  }
+    document.getElementById("search-btn").addEventListener("click", searchData);
+  },
 });
 
-/* =======================
-   RENDER SEARCH RESULT
-======================= */
+/*************************************************
+ * SEARCH DATA
+ *************************************************/
+function searchData() {
+  const IP_ADDRESS = document.getElementById("ip").value.trim();
+  const SLOT = document.getElementById("slot").value.trim();
+  const PORT = document.getElementById("port").value.trim();
+
+  const filteredData = data.filter((item) => {
+    return (
+      item.IP === IP_ADDRESS &&
+      item.SLOT === SLOT &&
+      item.PORT === PORT
+    );
+  });
+
+  renderTable(filteredData);
+}
+
+/*************************************************
+ * RENDER TABLE (INI JAWABAN PERTANYAAN KAMU)
+ *************************************************/
 function renderTable(data) {
   const tbody = document.getElementById("result-body");
   const emptyMsg = document.getElementById("empty-msg");
@@ -38,88 +53,53 @@ function renderTable(data) {
     return;
   }
 
-  data.forEach(item => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
+  data.forEach((item) => {
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
       <td>${item.IP}</td>
       <td>${item.SLOT}</td>
       <td>${item.PORT}</td>
       <td>${item.VLAN}</td>
-      <td>${item.ID_PORT}</td>
+      <td><b>${item.ID_PORT}</b></td>
       <td>${item.GPON}</td>
       <td>${item.VENDOR}</td>
     `;
 
-    tr.addEventListener("click", () => {
+    // 👉 LINK ID_PORT → RESOURCE_ID
+    row.addEventListener("click", () => {
       selectedIdPort = item.ID_PORT;
 
-      document.querySelectorAll("#result tr")
-        .forEach(r => r.classList.remove("selected"));
-      tr.classList.add("selected");
+      document.querySelectorAll(".res-id").forEach((input) => {
+        input.value = selectedIdPort;
+      });
 
-      document.querySelectorAll(".res-id")
-        .forEach(i => i.value = selectedIdPort);
+      // Optional highlight
+      document.querySelectorAll("#result-body tr").forEach(tr => {
+        tr.style.background = "";
+      });
+      row.style.background = "#d1ecf1";
     });
 
-    tbody.appendChild(tr);
+    tbody.appendChild(row);
   });
 }
 
-/* =======================
-   AUTO RULE GENERATOR
-======================= */
-function generateAutoRule() {
-  if (!selectedIdPort) {
-    alert("Pilih ID_PORT terlebih dahulu!");
-    return;
-  }
+/*************************************************
+ * ALTER PROV TABLE
+ *************************************************/
+function addRow() {
+  const tableBody = document.querySelector("#dataTable tbody");
+  const newRow = document.createElement("tr");
 
-  const crmText = document.getElementById("crmText").value;
-  const svlanInternet = document.getElementById("svlan-internet").value;
-  const svlanVoice = document.getElementById("svlan-voice").value;
-
-  const match = crmText.match(/Service ID is\s*([^\n]+)/i);
-  if (!match) {
-    alert("Service ID tidak ditemukan");
-    return;
-  }
-
-  const services = match[1].split(",").map(s => {
-    s = s.trim();
-    return s.startsWith("1-") ? s : "1-" + s;
-  });
-
-  const tbody = document.querySelector("#dataTable tbody");
-  tbody.innerHTML = "";
-
-  services.forEach(service => {
-    addAutoRow(selectedIdPort, service, "Service_Port");
-
-    if (service.includes("_INTERNET")) {
-      addAutoRow(svlanInternet, service, "S-Vlan");
-    }
-
-    if (service.includes("_VOICE")) {
-      addAutoRow(svlanVoice, service, "S-Vlan");
-    }
-  });
-}
-
-/* =======================
-   TABLE HELPERS
-======================= */
-function addAutoRow(resourceId, service, config) {
-  const tbody = document.querySelector("#dataTable tbody");
-  const tr = document.createElement("tr");
-
-  tr.innerHTML = `
-    <td><input class="res-id auto-fill" value="${resourceId}"></td>
-    <td><input class="ser-name auto-fill" value="${service}"></td>
-    <td><input class="tar-id" value=""></td>
+  newRow.innerHTML = `
+    <td><input type="text" class="res-id" value="${selectedIdPort}" placeholder="RESOURCE_ID"></td>
+    <td><input type="text" class="ser-name" placeholder="SERVICE_NAME"></td>
+    <td><input type="text" class="tar-id" placeholder="TARGET_ID (kosong)"></td>
     <td>
       <select class="cfg-name">
-        <option value="Service_Port" ${config==="Service_Port"?"selected":""}>Service_Port</option>
-        <option value="S-Vlan" ${config==="S-Vlan"?"selected":""}>S-Vlan</option>
+        <option value="Service_Port">Service_Port</option>
+        <option value="S-Vlan">S-Vlan</option>
         <option value="Subscriber_Terminal_Port">Subscriber_Terminal_Port</option>
         <option value="Service_Trail">Service_Trail</option>
       </select>
@@ -128,85 +108,54 @@ function addAutoRow(resourceId, service, config) {
       <button class="btn-remove" onclick="removeRow(this)">✕</button>
     </td>
   `;
-  tbody.appendChild(tr);
-}
 
-function addRow() {
-  addAutoRow(selectedIdPort, "", "Service_Port");
+  tableBody.appendChild(newRow);
 }
 
 function removeRow(btn) {
-  const row = btn.closest("tr");
-  const tbody = row.parentElement;
-  if (tbody.rows.length > 1) row.remove();
+  const tbody = document.querySelector("#dataTable tbody");
+  if (tbody.rows.length > 1) {
+    btn.closest("tr").remove();
+  } else {
+    alert("Minimal harus ada 1 baris");
+  }
 }
 
+/*************************************************
+ * EXPORT CSV
+ *************************************************/
 function downloadCSV() {
   const rows = document.querySelectorAll("#dataTable tr");
-  let csv = "";
+  let csvContent = "";
 
-  rows.forEach((row, i) => {
+  rows.forEach((row, rowIndex) => {
     const cols = row.querySelectorAll("th, td");
-    let data = [];
+    let rowData = [];
 
-    for (let j = 0; j < cols.length - 1; j++) {
-      if (i === 0) {
-        data.push(`"${cols[j].innerText}"`);
+    for (let i = 0; i < cols.length - 1; i++) {
+      let value = "";
+
+      if (rowIndex === 0) {
+        value = cols[i].innerText;
       } else {
-        const el = cols[j].querySelector("input,select");
-        data.push(`"${el ? el.value.replace(/"/g,'""') : ""}"
+        const input = cols[i].querySelector("input, select");
+        value = input ? input.value : "";
+      }
 
-function generateAutoRule() {
-  if (!selectedIdPort) {
-    alert("Klik ID_PORT dulu");
-    return;
-  }
-
-  const crm = document.getElementById("crmText").value;
-  const svlanInternet = document.getElementById("svlan-internet").value;
-  const svlanVoice = document.getElementById("svlan-voice").value;
-
-  const match = crm.match(/Service ID is\s*([^\n]+)/i);
-  if (!match) {
-    alert("Service ID tidak ditemukan");
-    return;
-  }
-
-  const services = match[1].split(",").map(s => {
-    s = s.trim();
-    return s.startsWith("1-") ? s : "1-" + s;
-  });
-
-  const tbody = document.querySelector("#dataTable tbody");
-
-  services.forEach(service => {
-    addAuto(service, "Service_Port");
-
-    if (service.includes("_INTERNET")) {
-      addAuto(service, "S-Vlan", svlanInternet);
+      value = value.replace(/"/g, '""');
+      rowData.push(`"${value}"`);
     }
 
-    if (service.includes("_VOICE")) {
-      addAuto(service, "S-Vlan", svlanVoice);
-    }
+    csvContent += rowData.join(",") + "\n";
   });
-}
 
-function addAuto(service, config, resourceOverride="") {
-  const tbody = document.querySelector("#dataTable tbody");
-  const tr = document.createElement("tr");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
 
-  tr.innerHTML = `
-    <td><input class="res-id" value="${resourceOverride || selectedIdPort}"></td>
-    <td><input class="ser-name" value="${service}"></td>
-    <td><input class="tar-id" value=""></td>
-    <td>
-      <select class="cfg-name">
-        <option ${config==="Service_Port"?"selected":""}>Service_Port</option>
-        <option ${config==="S-Vlan"?"selected":""}>S-Vlan</option>
-      </select>
-    </td>
-    <td><button class="btn-remove" onclick="removeRow(this)">✕</button></td>
-  `;
-  tbody.appendChild(tr);
+  link.href = url;
+  link.download = "Alter_Service_Config_Item.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
