@@ -145,3 +145,29 @@ function downloadCSV() {
     document.body.removeChild(link);
 }
 
+/* =========================
+   COPY-PASTE GENERATOR
+========================= */
+function generateCopy() {
+  const rows = document.querySelectorAll("#dataTable tbody tr");
+  let output = "";
+
+  rows.forEach(row => {
+    const res = row.querySelector(".res-id")?.value || "";
+    const svc = row.querySelector(".ser-name")?.value || "";
+    const tgt = row.querySelector(".tar-id")?.value || "";
+    const cfg = row.querySelector(".cfg-name")?.value || "";
+
+    output += `${res}\t${svc}\t${tgt}\t${cfg}\n`;
+  });
+
+  document.getElementById("copy-output").value = output.trim();
+}
+
+function copyToClipboard() {
+  const textarea = document.getElementById("copy-output");
+  textarea.select();
+  document.execCommand("copy");
+  alert("Berhasil di copy!");
+}
+
