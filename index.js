@@ -5,58 +5,67 @@ let data = [];
 let selectedIdPort = "";
 
 /*************************************************
- * LOAD CSV (TANPA UPLOAD MANUAL)
+ * LOAD CSV (GITHUB PAGES FRIENDLY)
  *************************************************/
-Papa.parse("data.csv", {
+Papa.parse("./data.csv", {
   download: true,
-  delimiter: ",",
   header: true,
   skipEmptyLines: true,
   complete: function (results) {
+    console.log("CSV LOADED:", results.data.length);
     data = results.data;
 
-    document.getElementById("search-btn").addEventListener("click", searchData);
+    const btn = document.getElementById("search-btn");
+    if (btn) {
+      btn.addEventListener("click", searchData);
+    }
   },
+  error: function (err) {
+    console.error("CSV LOAD ERROR:", err);
+  }
 });
 
 /*************************************************
- * SEARCH DATA
+ * SEARCH
  *************************************************/
 function searchData() {
-  const IP_ADDRESS = document.getElementById("ip").value.trim();
+  const IP = document.getElementById("ip").value.trim();
   const SLOT = document.getElementById("slot").value.trim();
   const PORT = document.getElementById("port").value.trim();
 
-  const filteredData = data.filter((item) => {
-    return (
-      item.IP === IP_ADDRESS &&
-      item.SLOT === SLOT &&
-      item.PORT === PORT
-    );
-  });
+  if (!IP || !SLOT || !PORT) {
+    alert("IP, SLOT, dan PORT wajib diisi");
+    return;
+  }
 
-  renderTable(filteredData);
+  const result = data.filter(d =>
+    d.IP === IP &&
+    d.SLOT === SLOT &&
+    d.PORT === PORT
+  );
+
+  renderTable(result);
 }
 
 /*************************************************
- * RENDER TABLE (INI JAWABAN PERTANYAAN KAMU)
+ * RENDER TABLE (INI YANG KAMU CARI)
  *************************************************/
-function renderTable(data) {
+function renderTable(rows) {
   const tbody = document.getElementById("result-body");
   const emptyMsg = document.getElementById("empty-msg");
 
   tbody.innerHTML = "";
   emptyMsg.textContent = "";
 
-  if (data.length === 0) {
+  if (!rows || rows.length === 0) {
     emptyMsg.textContent = "Tidak ada data yang ditemukan.";
     return;
   }
 
-  data.forEach((item) => {
-    const row = document.createElement("tr");
+  rows.forEach(item => {
+    const tr = document.createElement("tr");
 
-    row.innerHTML = `
+    tr.innerHTML = `
       <td>${item.IP}</td>
       <td>${item.SLOT}</td>
       <td>${item.PORT}</td>
@@ -67,21 +76,20 @@ function renderTable(data) {
     `;
 
     // 👉 LINK ID_PORT → RESOURCE_ID
-    row.addEventListener("click", () => {
+    tr.addEventListener("click", () => {
       selectedIdPort = item.ID_PORT;
 
-      document.querySelectorAll(".res-id").forEach((input) => {
-        input.value = selectedIdPort;
+      document.querySelectorAll(".res-id").forEach(i => {
+        i.value = selectedIdPort;
       });
 
-      // Optional highlight
-      document.querySelectorAll("#result-body tr").forEach(tr => {
-        tr.style.background = "";
+      document.querySelectorAll("#result-body tr").forEach(r => {
+        r.style.background = "";
       });
-      row.style.background = "#d1ecf1";
+      tr.style.background = "#cce5ff";
     });
 
-    tbody.appendChild(row);
+    tbody.appendChild(tr);
   });
 }
 
@@ -89,10 +97,10 @@ function renderTable(data) {
  * ALTER PROV TABLE
  *************************************************/
 function addRow() {
-  const tableBody = document.querySelector("#dataTable tbody");
-  const newRow = document.createElement("tr");
+  const tbody = document.querySelector("#dataTable tbody");
+  const tr = document.createElement("tr");
 
-  newRow.innerHTML = `
+  tr.innerHTML = `
     <td><input type="text" class="res-id" value="${selectedIdPort}" placeholder="RESOURCE_ID"></td>
     <td><input type="text" class="ser-name" placeholder="SERVICE_NAME"></td>
     <td><input type="text" class="tar-id" placeholder="TARGET_ID (kosong)"></td>
@@ -109,7 +117,7 @@ function addRow() {
     </td>
   `;
 
-  tableBody.appendChild(newRow);
+  tbody.appendChild(tr);
 }
 
 function removeRow(btn) {
@@ -126,36 +134,36 @@ function removeRow(btn) {
  *************************************************/
 function downloadCSV() {
   const rows = document.querySelectorAll("#dataTable tr");
-  let csvContent = "";
+  let csv = "";
 
-  rows.forEach((row, rowIndex) => {
+  rows.forEach((row, idx) => {
     const cols = row.querySelectorAll("th, td");
-    let rowData = [];
+    let line = [];
 
     for (let i = 0; i < cols.length - 1; i++) {
-      let value = "";
+      let val = "";
 
-      if (rowIndex === 0) {
-        value = cols[i].innerText;
+      if (idx === 0) {
+        val = cols[i].innerText;
       } else {
-        const input = cols[i].querySelector("input, select");
-        value = input ? input.value : "";
+        const el = cols[i].querySelector("input, select");
+        val = el ? el.value : "";
       }
 
-      value = value.replace(/"/g, '""');
-      rowData.push(`"${value}"`);
+      val = val.replace(/"/g, '""');
+      line.push(`"${val}"`);
     }
 
-    csvContent += rowData.join(",") + "\n";
+    csv += line.join(",") + "\n";
   });
 
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
+  const a = document.createElement("a");
 
-  link.href = url;
-  link.download = "Alter_Service_Config_Item.csv";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  a.href = url;
+  a.download = "Alter_Service_Config_Item.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
