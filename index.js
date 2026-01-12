@@ -155,3 +155,58 @@ function downloadCSV() {
       } else {
         const el = cols[j].querySelector("input,select");
         data.push(`"${el ? el.value.replace(/"/g,'""') : ""}"
+
+function generateAutoRule() {
+  if (!selectedIdPort) {
+    alert("Klik ID_PORT dulu");
+    return;
+  }
+
+  const crm = document.getElementById("crmText").value;
+  const svlanInternet = document.getElementById("svlan-internet").value;
+  const svlanVoice = document.getElementById("svlan-voice").value;
+
+  const match = crm.match(/Service ID is\s*([^\n]+)/i);
+  if (!match) {
+    alert("Service ID tidak ditemukan");
+    return;
+  }
+
+  const services = match[1].split(",").map(s => {
+    s = s.trim();
+    return s.startsWith("1-") ? s : "1-" + s;
+  });
+
+  const tbody = document.querySelector("#dataTable tbody");
+
+  services.forEach(service => {
+    addAuto(service, "Service_Port");
+
+    if (service.includes("_INTERNET")) {
+      addAuto(service, "S-Vlan", svlanInternet);
+    }
+
+    if (service.includes("_VOICE")) {
+      addAuto(service, "S-Vlan", svlanVoice);
+    }
+  });
+}
+
+function addAuto(service, config, resourceOverride="") {
+  const tbody = document.querySelector("#dataTable tbody");
+  const tr = document.createElement("tr");
+
+  tr.innerHTML = `
+    <td><input class="res-id" value="${resourceOverride || selectedIdPort}"></td>
+    <td><input class="ser-name" value="${service}"></td>
+    <td><input class="tar-id" value=""></td>
+    <td>
+      <select class="cfg-name">
+        <option ${config==="Service_Port"?"selected":""}>Service_Port</option>
+        <option ${config==="S-Vlan"?"selected":""}>S-Vlan</option>
+      </select>
+    </td>
+    <td><button class="btn-remove" onclick="removeRow(this)">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
