@@ -1,88 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Auto Rule Generator</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { margin-bottom: 10px; }
-    textarea, input { width: 100%; margin-bottom: 10px; padding: 8px; }
-    button { padding: 8px 14px; margin-right: 8px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-    th { background: #eee; }
-  </style>
-</head>
-<body>
-
-<h1>Auto Rule Generator</h1>
-
-<label>Upload CSV</label>
-<input type="file" id="csvFile" accept=".csv" />
-
-<label>Text CRM</label>
-<textarea id="crmText" rows="4"></textarea>
-
-<label>IP</label>
-<input type="text" id="ip" />
-
-<label>SLOT</label>
-<input type="text" id="slot" />
-
-<label>PORT</label>
-<input type="text" id="port" />
-
-<button onclick="generate()">Generate</button>
-
-<table>
-  <thead>
-    <tr>
-      <th>RESOURCE_ID</th>
-      <th>SERVICE_NAME</th>
-      <th>TARGET_ID</th>
-      <th>CONFIG_ITEM_NAME</th>
-    </tr>
-  </thead>
-  <tbody id="output"></tbody>
-</table>
-
 <script>
-let csvData = [];
-
-document.getElementById('csvFile').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    const lines = evt.target.result.split(/\r?\n/);
-    csvData = lines.map(l => l.split(','));
-  };
-  reader.readAsText(file);
-});
-
 function generate() {
   const crm = document.getElementById('crmText').value;
-  const serviceMatch = crm.match(/Service ID is\s*([^\s]+)/i);
-  const serviceName = serviceMatch ? serviceMatch[1] : '';
+
+  // Ambil SEMUA Service ID (INTERNET / VOICE / IPTV)
+  const services = [...crm.matchAll(/Service ID is\s*([^\s]+)/gi)]
+                    .map(m => m[1]);
 
   const output = document.getElementById('output');
   output.innerHTML = '';
 
-  csvData.forEach((row, i) => {
-    if (row.length < 2) return;
+  services.forEach(service => {
 
-    let tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${row[0] || ''}</td>
-      <td>${row[1] || serviceName}</td>
-      <td>${row[2] || ''}</td>
-      <td>${row[3] || ''}</td>
+    // Service_Port (TARGET_ID dikosongkan)
+    output.innerHTML += `
+      <tr>
+        <td>12103477-75980417</td>
+        <td>${service}</td>
+        <td></td>
+        <td>Service_Port</td>
+      </tr>
     `;
-    output.appendChild(tr);
+
+    // INTERNET → S-Vlan
+    if (service.includes('_INTERNET')) {
+      output.innerHTML += `
+        <tr>
+          <td>2685</td>
+          <td>${service}</td>
+          <td></td>
+          <td>S-Vlan</td>
+        </tr>
+      `;
+    }
+
+    // VOICE → S-Vlan
+    if (service.includes('_VOICE')) {
+      output.innerHTML += `
+        <tr>
+          <td>519</td>
+          <td>${service}</td>
+          <td></td>
+          <td>S-Vlan</td>
+        </tr>
+      `;
+    }
+
+    // IPTV ❌ tidak ada S-Vlan
   });
 }
 </script>
-
-</body>
-</html>
