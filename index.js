@@ -1,36 +1,32 @@
-let dataArray = [];
+let selectedIdPort = "";
 
+/* =======================
+   LOAD & SEARCH DATA CSV
+======================= */
 Papa.parse("data.csv", {
   download: true,
-  delimiter: ",",
   header: true,
-  skinEmptyLines: true,
+  skipEmptyLines: true,
   complete: function (results) {
-    data = results.data;
-    const searchBtn = document.getElementById("search-btn");
-    searchBtn.addEventListener("click", () => {
-      const IP_ADDRESS = document.getElementById("ip").value;
-      const SLOT = document.getElementById("slot").value;
-      const PORT = document.getElementById("port").value;
+    const data = results.data;
+    document.getElementById("search-btn").addEventListener("click", () => {
+      const IP = ip.value;
+      const SLOT = slot.value;
+      const PORT = port.value;
 
-      //Search VLAN & ID_PORT
-      const filteredData = data.filter((item) => {
-        return (
-          item.IP === IP_ADDRESS && item.SLOT === SLOT && item.PORT === PORT
-        );
-      });
+      const filtered = data.filter(d =>
+        d.IP === IP && d.SLOT === SLOT && d.PORT === PORT
+      );
 
-      getData(filteredData);
+      renderTable(filtered);
     });
-  },
+  }
 });
 
-const getData = (data) => {
-  dataArray.push(data);
-  renderTable(data);
-};
-
-const renderTable = (data) => {
+/* =======================
+   RENDER SEARCH RESULT
+======================= */
+function renderTable(data) {
   const tbody = document.getElementById("result-body");
   const emptyMsg = document.getElementById("empty-msg");
 
@@ -42,105 +38,120 @@ const renderTable = (data) => {
     return;
   }
 
-  data.forEach((data) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-            <td>${data.IP}</td>
-            <td>${data.SLOT}</td>
-            <td>${data.PORT}</td>
-            <td>${data.VLAN}</td>
-            <td>${data.ID_PORT}</td>
-            <td>${data.GPON}</td>
-            <td>${data.VENDOR}</td>
-        `;
-    tbody.appendChild(row);
-  });
-};
-
-
-
-/**
- * Fungsi untuk menambah baris baru ke tabel
- */
-function addRow() {
-    const tableBody = document.querySelector("#dataTable tbody");
-    const newRow = document.createElement("tr");
-
-    newRow.innerHTML = `
-        <td><input type="text" class="res-id" placeholder="ID..."></td>
-        <td><input type="text" class="ser-name" placeholder="Nama Service..."></td>
-        <td><input type="text" class="tar-id" placeholder="ID Target..."></td>
-        <td>
-            <select class="cfg-name">
-                <option value="Service_Port">Service_Port</option>
-                <option value="S-Vlan">S-Vlan</option>
-                <option value="Subscriber_Terminal_Port">Subscriber_Terminal_Port</option>
-                <option value="Service_Trail">Service_Trail</option>
-            </select>
-        </td>
-        <td><button class="btn-remove" onclick="removeRow(this)">✕</button></td>
+  data.forEach(item => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${item.IP}</td>
+      <td>${item.SLOT}</td>
+      <td>${item.PORT}</td>
+      <td>${item.VLAN}</td>
+      <td>${item.ID_PORT}</td>
+      <td>${item.GPON}</td>
+      <td>${item.VENDOR}</td>
     `;
-    
-    tableBody.appendChild(newRow);
-}
 
-/**
- * Fungsi untuk menghapus baris tertentu
- */
-function removeRow(btn) {
-    const row = btn.closest("tr");
-    const tbody = document.querySelector("#dataTable tbody");
-    
-    if (tbody.rows.length > 1) {
-        row.remove();
-    } else {
-        alert("Gagal menghapus. Harus ada minimal satu baris input.");
-    }
-}
+    tr.addEventListener("click", () => {
+      selectedIdPort = item.ID_PORT;
 
-/**
- * Fungsi untuk mengkonversi data tabel ke format CSV dan mendownloadnya
- */
-function downloadCSV() {
-    const rows = document.querySelectorAll("#dataTable tr");
-    let csvContent = "";
+      document.querySelectorAll("#result tr")
+        .forEach(r => r.classList.remove("selected"));
+      tr.classList.add("selected");
 
-    rows.forEach((row, rowIndex) => {
-        let rowData = [];
-        const cols = row.querySelectorAll("th, td");
-
-        // Loop setiap kolom kecuali kolom terakhir (kolom Aksi)
-        for (let i = 0; i < cols.length - 1; i++) {
-            let cellValue = "";
-
-            if (rowIndex === 0) {
-                // Ambil teks dari header (thead)
-                cellValue = cols[i].innerText;
-            } else {
-                // Ambil value dari input atau select (tbody)
-                const inputElement = cols[i].querySelector("input, select");
-                cellValue = inputElement ? inputElement.value : "";
-            }
-
-            // Bersihkan data dari tanda kutip ganda dan bungkus dengan kutip untuk format CSV aman
-            cellValue = cellValue.replace(/"/g, '""');
-            rowData.push(`"${cellValue}"`);
-        }
-        
-        csvContent += rowData.join(",") + "\n";
+      document.querySelectorAll(".res-id")
+        .forEach(i => i.value = selectedIdPort);
     });
 
-    // Proses pembuatan file dan download
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Alter Service Config Item.csv`);
-    link.style.visibility = "hidden";
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    tbody.appendChild(tr);
+  });
 }
+
+/* =======================
+   AUTO RULE GENERATOR
+======================= */
+function generateAutoRule() {
+  if (!selectedIdPort) {
+    alert("Pilih ID_PORT terlebih dahulu!");
+    return;
+  }
+
+  const crmText = document.getElementById("crmText").value;
+  const svlanInternet = document.getElementById("svlan-internet").value;
+  const svlanVoice = document.getElementById("svlan-voice").value;
+
+  const match = crmText.match(/Service ID is\s*([^\n]+)/i);
+  if (!match) {
+    alert("Service ID tidak ditemukan");
+    return;
+  }
+
+  const services = match[1].split(",").map(s => {
+    s = s.trim();
+    return s.startsWith("1-") ? s : "1-" + s;
+  });
+
+  const tbody = document.querySelector("#dataTable tbody");
+  tbody.innerHTML = "";
+
+  services.forEach(service => {
+    addAutoRow(selectedIdPort, service, "Service_Port");
+
+    if (service.includes("_INTERNET")) {
+      addAutoRow(svlanInternet, service, "S-Vlan");
+    }
+
+    if (service.includes("_VOICE")) {
+      addAutoRow(svlanVoice, service, "S-Vlan");
+    }
+  });
+}
+
+/* =======================
+   TABLE HELPERS
+======================= */
+function addAutoRow(resourceId, service, config) {
+  const tbody = document.querySelector("#dataTable tbody");
+  const tr = document.createElement("tr");
+
+  tr.innerHTML = `
+    <td><input class="res-id auto-fill" value="${resourceId}"></td>
+    <td><input class="ser-name auto-fill" value="${service}"></td>
+    <td><input class="tar-id" value=""></td>
+    <td>
+      <select class="cfg-name">
+        <option value="Service_Port" ${config==="Service_Port"?"selected":""}>Service_Port</option>
+        <option value="S-Vlan" ${config==="S-Vlan"?"selected":""}>S-Vlan</option>
+        <option value="Subscriber_Terminal_Port">Subscriber_Terminal_Port</option>
+        <option value="Service_Trail">Service_Trail</option>
+      </select>
+    </td>
+    <td style="text-align:center">
+      <button class="btn-remove" onclick="removeRow(this)">✕</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function addRow() {
+  addAutoRow(selectedIdPort, "", "Service_Port");
+}
+
+function removeRow(btn) {
+  const row = btn.closest("tr");
+  const tbody = row.parentElement;
+  if (tbody.rows.length > 1) row.remove();
+}
+
+function downloadCSV() {
+  const rows = document.querySelectorAll("#dataTable tr");
+  let csv = "";
+
+  rows.forEach((row, i) => {
+    const cols = row.querySelectorAll("th, td");
+    let data = [];
+
+    for (let j = 0; j < cols.length - 1; j++) {
+      if (i === 0) {
+        data.push(`"${cols[j].innerText}"`);
+      } else {
+        const el = cols[j].querySelector("input,select");
+        data.push(`"${el ? el.value.replace(/"/g,'""') : ""}"
