@@ -2,132 +2,105 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Ruleset Generator (CRM + Google Sheets)</title>
+<title>Ruleset Generator</title>
 <style>
 body { font-family: Arial; padding:20px }
 textarea { width:100%; height:120px }
-input { margin:5px; padding:5px }
-button { padding:10px; margin-top:10px }
+input { padding:6px; margin:5px }
+button { padding:8px 16px }
 table { border-collapse:collapse; margin-top:20px }
-th, td { border:1px solid #000; padding:6px }
+th,td { border:1px solid #000; padding:6px }
 </style>
 </head>
 <body>
 
 <h2>Ruleset Generator (CRM + Google Sheets)</h2>
 
-<textarea id="crmText" placeholder="Paste text CRM di sini"></textarea><br>
+<textarea id="crm" placeholder="Paste text CRM di sini"></textarea><br>
 
-IP: <input id="ip" placeholder="IP OLT">
-SLOT: <input id="slot" placeholder="SLOT">
-PORT: <input id="port" placeholder="PORT"><br>
+IP <input id="ip">
+SLOT <input id="slot">
+PORT <input id="port">
+<button onclick="proses()">PROSES</button>
 
-<button onclick="run()">PROSES</button>
-
-<table id="result">
-  <tr>
-    <th>RESOURCE_ID</th>
-    <th>SERVICE_NAME</th>
-    <th>TARGET_ID</th>
-    <th>CONFIG_ITEM_NAME</th>
-  </tr>
+<table id="out">
+<tr>
+<th>RESOURCE_ID</th>
+<th>SERVICE_NAME</th>
+<th>TARGET_ID</th>
+<th>CONFIG_ITEM_NAME</th>
+</tr>
 </table>
 
 <script>
-// =================================
-// ✅ GANTI LINK SHEET JSON DI BAWAH
-// =================================
+const SHEET_URL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vTUzTtaRANBaWfV3cnPwGxMxdI4ZYePm3IgBsVQ8t6Ho8rBZEPU3O-ZpqdK5sQYbXHqBsaClqtzk-0y/gviz/tq?tqx=out:json";
 
-// Ambil JSON dari Google Visualization (lebih aman)
-const GOOGLE_SHEET_JSON =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUzTtaRANBaWfV3cnPwGxMxdI4ZYePm3IgBsVQ8t6Ho8rBZEPU3O-ZpqdK5sQYbXHqBsaClqtzk-0y/gviz/tq?gid=0";
+function proses() {
+  const crm = document.getElementById("crm").value;
+  const ip = document.getElementById("ip").value.trim();
+  const slot = document.getElementById("slot").value.trim();
+  const port = document.getElementById("port").value.trim();
 
-function run() {
-  try {
-    const crmText = document.getElementById("crmText").value;
-    const ip = document.getElementById("ip").value.trim();
-    const slot = document.getElementById("slot").value.trim();
-    const port = document.getElementById("port").value.trim();
-
-    if (!crmText || !ip || !slot || !port) {
-      alert("Semua input harus diisi!");
-      return;
-    }
-
-    const services = { INTERNET:false, VOICE:false, IPTV:false };
-    crmText.replace(/_(INTERNET|VOICE|IPTV)/g, (_, s) => services[s] = true);
-
-    fetch(GOOGLE_SHEET_JSON)
-      .then(res => res.text())
-      .then(txt => {
-        const json = JSON.parse(txt.substring(47).slice(0,-2));
-        const rows = json.table.rows;
-
-        const match = rows.find(r =>
-          r.c[0]?.v == ip &&
-          r.c[1]?.v == slot &&
-          r.c[2]?.v == port
-        );
-
-        if (!match) {
-          alert("Data OLT tidak ditemukan di sheet");
-          return;
-        }
-
-        const idPort = match.c[4]?.v || "";
-        const vlanRaw = match.c[3]?.v || "";
-        const vlanArr = vlanRaw.split(",").map(v => v.trim());
-
-        const svlanInternet = vlanArr[0] || "";
-        const svlanVoice    = vlanArr[1] || "";
-
-        const table = document.getElementById("result");
-        table.innerHTML = `
-          <tr>
-            <th>RESOURCE_ID</th>
-            <th>SERVICE_NAME</th>
-            <th>TARGET_ID</th>
-            <th>CONFIG_ITEM_NAME</th>
-          </tr>
-        `;
-
-        // INTERNET
-        if (services.INTERNET) {
-          table.innerHTML += `
-            <tr><td>${idPort}</td><td>INTERNET</td><td></td><td>Service_Port</td></tr>
-          `;
-          if (svlanInternet) {
-            table.innerHTML += `
-              <tr><td>${svlanInternet}</td><td>INTERNET</td><td></td><td>S-Vlan</td></tr>
-            `;
-          }
-        }
-
-        // VOICE
-        if (services.VOICE) {
-          table.innerHTML += `
-            <tr><td>${idPort}</td><td>VOICE</td><td></td><td>Service_Port</td></tr>
-          `;
-          if (svlanVoice) {
-            table.innerHTML += `
-              <tr><td>${svlanVoice}</td><td>VOICE</td><td></td><td>S-Vlan</td></tr>
-            `;
-          }
-        }
-
-        // IPTV
-        if (services.IPTV) {
-          table.innerHTML += `
-            <tr><td>${idPort}</td><td>IPTV</td><td></td><td>Service_Port</td></tr>
-          `;
-        }
-
-      });
+  if (!crm || !ip || !slot || !port) {
+    alert("Lengkapi semua input");
+    return;
   }
-  catch(err) {
-    alert("Error: " + err.message);
-    console.error(err);
-  }
+
+  const service = {
+    INTERNET: crm.includes("_INTERNET"),
+    VOICE: crm.includes("_VOICE"),
+    IPTV: crm.includes("_IPTV")
+  };
+
+  fetch(SHEET_URL)
+    .then(r => r.text())
+    .then(t => {
+      const json = JSON.parse(t.substring(47, t.length - 2));
+      const rows = json.table.rows;
+
+      const data = rows.find(r =>
+        r.c[0]?.v == ip &&
+        r.c[1]?.v == slot &&
+        r.c[2]?.v == port
+      );
+
+      if (!data) {
+        alert("IP SLOT PORT tidak ditemukan");
+        return;
+      }
+
+      const idPort = data.c[4].v;
+      const vlan = data.c[3].v.split(",");
+      const svlanInternet = vlan[0]?.trim();
+      const svlanVoice = vlan[1]?.trim();
+
+      const tbl = document.getElementById("out");
+      tbl.innerHTML = `
+      <tr>
+        <th>RESOURCE_ID</th>
+        <th>SERVICE_NAME</th>
+        <th>TARGET_ID</th>
+        <th>CONFIG_ITEM_NAME</th>
+      </tr>`;
+
+      if (service.INTERNET) {
+        tbl.innerHTML += `
+          <tr><td>${idPort}</td><td>INTERNET</td><td></td><td>Service_Port</td></tr>
+          <tr><td>${svlanInternet}</td><td>INTERNET</td><td></td><td>S-Vlan</td></tr>`;
+      }
+
+      if (service.VOICE) {
+        tbl.innerHTML += `
+          <tr><td>${idPort}</td><td>VOICE</td><td></td><td>Service_Port</td></tr>
+          <tr><td>${svlanVoice}</td><td>VOICE</td><td></td><td>S-Vlan</td></tr>`;
+      }
+
+      if (service.IPTV) {
+        tbl.innerHTML += `
+          <tr><td>${idPort}</td><td>IPTV</td><td></td><td>Service_Port</td></tr>`;
+      }
+    });
 }
 </script>
 
