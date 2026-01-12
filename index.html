@@ -14,7 +14,7 @@ th,td { border:1px solid #000; padding:6px }
 </head>
 <body>
 
-<h2>Ruleset Generator (CRM + Google Sheets)</h2>
+<h2>Ruleset Generator (CRM + Google Sheets CSV)</h2>
 
 <textarea id="crm" placeholder="Paste text CRM di sini"></textarea><br>
 
@@ -33,8 +33,8 @@ PORT <input id="port" placeholder="0">
 </table>
 
 <script>
-const SHEET_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vTUzTtaRANBaWfV3cnPwGxMxdI4ZYePm3IgBsVQ8t6Ho8rBZEPU3O-ZpqdK5sQYbXHqBsaClqtzk-0y/gviz/tq?tqx=out:json";
+const CSV_URL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vTUzTtaRANBaWfV3cnPwGxMxdI4ZYePm3IgBsVQ8t6Ho8rBZEPU3O-ZpqdK5sQYbXHqBsaClqtzk-0y/pub?output=csv";
 
 function proses() {
   const crm = document.getElementById("crm").value;
@@ -53,25 +53,27 @@ function proses() {
     IPTV: crm.includes("_IPTV")
   };
 
-  fetch(SHEET_URL)
+  fetch(CSV_URL)
     .then(r => r.text())
-    .then(t => {
-      const json = JSON.parse(t.substring(47, t.length - 2));
-      const rows = json.table.rows;
-
-      const data = rows.find(r =>
-        r.c[0]?.v.toString().trim() == ip &&
-        r.c[1]?.v.toString().trim() == slot &&
-        r.c[2]?.v.toString().trim() == port
+    .then(csv => {
+      const lines = csv.trim().split("\n");
+      const data = lines.slice(1).map(l =>
+        l.split(",").map(x => x.trim())
       );
 
-      if (!data) {
-        alert("DATA TIDAK DITEMUKAN (IP SLOT PORT)");
+      const row = data.find(r =>
+        r[0] === ip &&
+        r[1] === slot &&
+        r[2] === port
+      );
+
+      if (!row) {
+        alert("DATA IP / SLOT / PORT TIDAK DITEMUKAN");
         return;
       }
 
-      const idPort = data.c[4].v.toString().trim();
-      const vlanArr = data.c[3].v.toString().split(",");
+      const vlanArr = row[3].split(",");
+      const idPort = row[4];
 
       const svlanInternet = vlanArr[0]?.trim();
       const svlanVoice = vlanArr[1]?.trim();
@@ -103,7 +105,7 @@ function proses() {
       }
     })
     .catch(err => {
-      alert("ERROR load Google Sheet");
+      alert("Gagal load CSV Google Sheet");
       console.error(err);
     });
 }
