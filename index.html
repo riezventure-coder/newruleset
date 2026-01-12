@@ -1,57 +1,76 @@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="index.js"></script>
-
 <!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta charset="UTF-8" />
-  <title>ID PORT VLAN ALTER</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <title>ID PORT VLAN ALTER</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h2>Search ID PORT & VLAN</h2>
 
-<h2>Search ID PORT & VLAN</h2>
+	<div class="input-container">
+    		 <input id="ip" placeholder="IP" />
+   		 <input id="slot" placeholder="Slot" />
+   		 <input id="port" placeholder="Port" />
+    		 <button id="search-btn">Cari</button>
+	</div>
+    <table id="result" border="2">
+      <thead>
+        <tr>
+          <th>IP</th>
+          <th>SLOT</th>
+          <th>PORT</th>
+          <th>VLAN</th>
+          <th>ID_PORT</th>
+          <th>GPON</th>
+          <th>VENDOR</th>
+        </tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+    </table>
+	
 
-<div class="input-container">
-  <input id="ip" placeholder="IP" />
-  <input id="slot" placeholder="Slot" />
-  <input id="port" placeholder="Port" />
-  <button id="search-btn">Cari</button>
-</div>
+	   <h2>Alter Prov</h2>
+        <div class="container">
+          <table id="dataTable">
+            <thead>
+              <tr>
+                <th>RESOURCE_ID</th>
+                <th>SERVICE_NAME</th>
+                <th>TARGET_ID</th>
+                <th>CONFIG_ITEM_NAME</th>
+                <th style="width: 60px; text-align: center;">DELETE</th>
+              </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-label="RESOURCE_ID"><input type="text" class="res-id" placeholder="ID"></td>
+                    <td data-label="SERVICE_NAME"><input type="text" class="ser-name" placeholder="Service"></td>
+                    <td data-label="TARGET_ID"><input type="text" class="tar-id" placeholder="Target"></td>
+                    <td data-label="CONFIG_ITEM">
+                        <select class="cfg-name">
+                            <option value="Service_Port">Service_Port</option>
+                            <option value="S-Vlan">S-Vlan</option>
+                            <option value="Subscriber_Terminal_Port">Subscriber_Terminal_Port</option>
+                            <option value="Service_Trail">Service_Trail</option>
+                        </select>
+                    </td>
+                    <td data-label="ACT" style="text-align: center;">
+                        <button class="btn-remove" onclick="removeRow(this)">✕ Hapus</button>
+                    </td>
+                </tr>
+            </tbody>
+          </table>
+          <div class="btn-group">
+              <button class="btn-add" onclick="addRow()">+ Add</button>
+              <button class="btn-download" onclick="downloadCSV()">Export CSV</button>
+          </div>
 
-<table id="result" border="2">
-  <thead>
-    <tr>
-      <th>IP</th>
-      <th>SLOT</th>
-      <th>PORT</th>
-      <th>VLAN</th>
-      <th>ID_PORT</th>
-      <th>GPON</th>
-      <th>VENDOR</th>
-    </tr>
-  </thead>
-  <tbody id="result-body"></tbody>
-</table>
+    <p id="empty-msg"></p>
 
-<h2>Auto Rule Generator</h2>
-
-<textarea id="crmText" placeholder="Paste Text CRM di sini..."></textarea>
-
-<div class="input-container">
-  <input id="svlan-internet" placeholder="S-VLAN INTERNET">
-  <input id="svlan-voice" placeholder="S-VLAN VOICE">
-  <button onclick="generateAutoRule()">Generate Auto Rule</button>
-</div>
-
-<h2>Alter Prov</h2>
-
-<div class="container">
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th>RESOURCE_ID</th>
-        <th>SERVICE_NAME</th>
-        <th>TARGET_ID</th>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="index.js"></script>
+  </body>
+</html>
 
