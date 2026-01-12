@@ -1,88 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Auto Rule Generator</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { margin-bottom: 10px; }
-    textarea, input { width: 100%; margin-bottom: 10px; padding: 8px; }
-    button { padding: 8px 14px; margin-right: 8px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-    th { background: #eee; }
-  </style>
-</head>
-<body>
+<html lang="id">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <title>ID PORT VLAN ALTER</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h2>Search ID PORT & VLAN</h2>
 
-<h1>Auto Rule Generator</h1>
+	<div class="input-container">
+    		 <input id="ip" placeholder="IP" />
+   		 <input id="slot" placeholder="Slot" />
+   		 <input id="port" placeholder="Port" />
+    		 <button id="search-btn">Cari</button>
+	</div>
+    <table id="result" border="2">
+      <thead>
+        <tr>
+          <th>IP</th>
+          <th>SLOT</th>
+          <th>PORT</th>
+          <th>VLAN</th>
+          <th>ID_PORT</th>
+          <th>GPON</th>
+          <th>VENDOR</th>
+        </tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+    </table>
+	
 
-<label>Upload CSV</label>
-<input type="file" id="csvFile" accept=".csv" />
+	   <h2>Alter Prov</h2>
+        <div class="container">
+          <table id="dataTable">
+            <thead>
+              <tr>
+                <th>RESOURCE_ID</th>
+                <th>SERVICE_NAME</th>
+                <th>TARGET_ID</th>
+                <th>CONFIG_ITEM_NAME</th>
+                <th style="width: 60px; text-align: center;">DELETE</th>
+              </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-label="RESOURCE_ID"><input type="text" class="res-id" placeholder="ID"></td>
+                    <td data-label="SERVICE_NAME"><input type="text" class="ser-name" placeholder="Service"></td>
+                    <td data-label="TARGET_ID"><input type="text" class="tar-id" placeholder="Target"></td>
+                    <td data-label="CONFIG_ITEM">
+                        <select class="cfg-name">
+                            <option value="Service_Port">Service_Port</option>
+                            <option value="S-Vlan">S-Vlan</option>
+                            <option value="Subscriber_Terminal_Port">Subscriber_Terminal_Port</option>
+                            <option value="Service_Trail">Service_Trail</option>
+                        </select>
+                    </td>
+                    <td data-label="ACT" style="text-align: center;">
+                        <button class="btn-remove" onclick="removeRow(this)">✕ Hapus</button>
+                    </td>
+                </tr>
+            </tbody>
+          </table>
+          <div class="btn-group">
+              <button class="btn-add" onclick="addRow()">+ Add</button>
+              <button class="btn-download" onclick="downloadCSV()">Export CSV</button>
+          </div>
 
-<label>Text CRM</label>
-<textarea id="crmText" rows="4"></textarea>
+    <p id="empty-msg"></p>
 
-<label>IP</label>
-<input type="text" id="ip" />
-
-<label>SLOT</label>
-<input type="text" id="slot" />
-
-<label>PORT</label>
-<input type="text" id="port" />
-
-<button onclick="generate()">Generate</button>
-
-<table>
-  <thead>
-    <tr>
-      <th>RESOURCE_ID</th>
-      <th>SERVICE_NAME</th>
-      <th>TARGET_ID</th>
-      <th>CONFIG_ITEM_NAME</th>
-    </tr>
-  </thead>
-  <tbody id="output"></tbody>
-</table>
-
-<script>
-let csvData = [];
-
-document.getElementById('csvFile').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    const lines = evt.target.result.split(/\r?\n/);
-    csvData = lines.map(l => l.split(','));
-  };
-  reader.readAsText(file);
-});
-
-function generate() {
-  const crm = document.getElementById('crmText').value;
-  const serviceMatch = crm.match(/Service ID is\s*([^\s]+)/i);
-  const serviceName = serviceMatch ? serviceMatch[1] : '';
-
-  const output = document.getElementById('output');
-  output.innerHTML = '';
-
-  csvData.forEach((row, i) => {
-    if (row.length < 2) return;
-
-    let tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${row[0] || ''}</td>
-      <td>${row[1] || serviceName}</td>
-      <td>${row[2] || ''}</td>
-      <td>${row[3] || ''}</td>
-    `;
-    output.appendChild(tr);
-  });
-}
-</script>
-
-</body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="index.js"></script>
+  </body>
 </html>
