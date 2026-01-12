@@ -1,137 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>CRM Ruleset Generator (Final)</title>
+<title>Auto Rule Generator</title>
 <style>
-  body { font-family: Arial; padding: 20px; }
-  textarea { width: 100%; height: 120px; margin-bottom: 8px; }
-  input { padding: 6px; margin: 6px 0; width: calc(33% - 8px); }
-  button { padding: 10px 16px; margin-top: 10px; }
-  table { border-collapse: collapse; margin-top: 20px; width: 100%; }
-  th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-  th { background-color: #ddd; }
+body { font-family: Arial; padding: 20px; }
+textarea, input { width: 100%; margin-bottom: 10px; padding: 8px; }
+button { padding: 10px 16px; margin: 5px 0; cursor: pointer; }
+table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+th { background: #eee; }
 </style>
 </head>
 <body>
 
-<h2>CRM Ruleset Generator</h2>
+<h2>Auto Rule Generator</h2>
 
-<label><strong>Paste Text CRM:</strong></label><br>
-<textarea id="crmText" placeholder="Paste text CRM di sini"></textarea><br>
+<label>Text CRM</label>
+<textarea id="crm" rows="6"></textarea>
 
-<label><strong>Input IP / SLOT / PORT:</strong></label><br>
-<input id="ip" placeholder="Contoh: 172.24.155.4">
-<input id="slot" placeholder="Contoh: 1">
-<input id="port" placeholder="Contoh: 0">
+<label>IP</label>
+<input id="ip">
 
-<br>
-<button onclick="generateRuleset()">GENERATE</button>
+<label>SLOT</label>
+<input id="slot">
 
-<table id="resultTable">
-  <tr>
-    <th>RESOURCE_ID</th>
-    <th>SERVICE_NAME</th>
-    <th>TARGET_ID</th>
-    <th>CONFIG_ITEM_NAME</th>
-  </tr>
+<label>PORT</label>
+<input id="port">
+
+<button onclick="generate()">Generate</button>
+<button onclick="copyTable()">📋 Copy Output</button>
+
+<table id="result">
+<thead>
+<tr>
+<th>RESOURCE_ID</th>
+<th>SERVICE_NAME</th>
+<th>TARGET_ID</th>
+<th>CONFIG_ITEM_NAME</th>
+</tr>
+</thead>
+<tbody></tbody>
 </table>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzP8jhWWGpt8QygEx29yvMhVHh1L6iqxFCW90N5vUyNVFcSYgEZjm2eAbRPFRqXjGcq/exec";
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbzP8jhWWGpt8QygEx29yvMhVHh1L6iqxFCW90N5vUyNVFcSYgEZjm2eAbRPFRqXjGcq/exec";
 
-function generateRuleset() {
-  const crmText = document.getElementById("crmText").value.trim();
+let sheetData = [];
+
+fetch(SHEET_URL)
+  .then(res => res.json())
+  .then(data => sheetData = data)
+  .catch(() => alert("ERROR load Google Sheet"));
+
+function generate() {
+  const crm = document.getElementById("crm").value;
   const ip = document.getElementById("ip").value.trim();
   const slot = document.getElementById("slot").value.trim();
   const port = document.getElementById("port").value.trim();
-  const table = document.getElementById("resultTable");
+  const tbody = document.querySelector("#result tbody");
 
-  if (!crmText || !ip || !slot || !port) {
-    alert("Lengkapi semua input (CRM, IP, SLOT, PORT).");
+  tbody.innerHTML = "";
+
+  if (!crm || !ip || !slot || !port) {
+    alert("Data belum lengkap");
     return;
   }
 
-  // Deteksi layanan dari CRM
-  const services = {
-    INTERNET: crmText.includes("_INTERNET"),
-    VOICE: crmText.includes("_VOICE"),
-    IPTV: crmText.includes("_IPTV")
-  };
+  const row = sheetData.find(r =>
+    r.IP === ip &&
+    r.SLOT == slot &&
+    r.PORT == port
+  );
 
-  // Fetch data dari Google Apps Script API
-  fetch(API_URL)
-    .then(res => res.json())
-    .then(data => {
-      // Masing-masing baris = array nilai per kolom
-      // data[0] = header row
-      const rows = data.slice(1); // skip header
+  if (!row) {
+    alert("Data PORT tidak ditemukan");
+    return;
+  }
 
-      // Cari baris yang sesuai IP, SLOT, PORT
-      const match = rows.find(r =>
-        r[0]?.toString().trim() === ip &&
-        r[1]?.toString().trim() === slot &&
-        r[2]?.toString().trim() === port
-      );
+  const idPort = row.ID_PORT;
+  const vlans = row.VLAN.split(",").map(v => v.trim());
+  const svlanInternet = vlans[0] || "";
+  const svlanVoice = vlans[1] || "";
 
-      if (!match) {
-        alert("Data OLT tidak ditemukan di Google Sheet.");
-        return;
-      }
+  // Ambil SERVICE_NAME dari CRM (fleksibel)
+  const serviceIds = crm.match(/[\w-]+_(INTERNET|VOICE|IPTV)/g) || [];
 
-      // Ambil ID_PORT dan VLAN
-      const idPort = match[4]?.toString().trim() || "";
-      const vlanRaw = match[3]?.toString().trim() || "";
-      const vlanParts = vlanRaw.split(",").map(v => v.trim());
+  serviceIds.forEach(service => {
+    const type =
+      service.endsWith("_INTERNET") ? "INTERNET" :
+      service.endsWith("_VOICE") ? "VOICE" :
+      "IPTV";
 
-      const svlanInternet = vlanParts[0] || "";
-      const svlanVoice = vlanParts[1] || "";
+    // Service_Port
+    tbody.innerHTML += `
+      <tr>
+        <td>${idPort}</td>
+        <td>${service}</td>
+        <td></td>
+        <td>Service_Port</td>
+      </tr>
+    `;
 
-      // Reset tabel
-      table.innerHTML = `
+    // S-VLAN
+    if (type === "INTERNET" && svlanInternet) {
+      tbody.innerHTML += `
         <tr>
-          <th>RESOURCE_ID</th>
-          <th>SERVICE_NAME</th>
-          <th>TARGET_ID</th>
-          <th>CONFIG_ITEM_NAME</th>
+          <td>${svlanInternet}</td>
+          <td>${service}</td>
+          <td></td>
+          <td>S-Vlan</td>
         </tr>
       `;
+    }
 
-      // INTERNET
-      if (services.INTERNET) {
-        table.innerHTML += `
-          <tr><td>${idPort}</td><td>INTERNET</td><td></td><td>Service_Port</td></tr>
-        `;
-        if (svlanInternet) {
-          table.innerHTML += `
-            <tr><td>${svlanInternet}</td><td>INTERNET</td><td></td><td>S-Vlan</td></tr>
-          `;
-        }
-      }
+    if (type === "VOICE" && svlanVoice) {
+      tbody.innerHTML += `
+        <tr>
+          <td>${svlanVoice}</td>
+          <td>${service}</td>
+          <td></td>
+          <td>S-Vlan</td>
+        </tr>
+      `;
+    }
+  });
+}
 
-      // VOICE
-      if (services.VOICE) {
-        table.innerHTML += `
-          <tr><td>${idPort}</td><td>VOICE</td><td></td><td>Service_Port</td></tr>
-        `;
-        if (svlanVoice) {
-          table.innerHTML += `
-            <tr><td>${svlanVoice}</td><td>VOICE</td><td></td><td>S-Vlan</td></tr>
-          `;
-        }
-      }
-
-      // IPTV
-      if (services.IPTV) {
-        table.innerHTML += `
-          <tr><td>${idPort}</td><td>IPTV</td><td></td><td>Service_Port</td></tr>
-        `;
-      }
-
-    }).catch(err => {
-      console.error(err);
-      alert("Gagal memuat data dari Google Sheet API.");
-    });
+function copyTable() {
+  let text = "";
+  document.querySelectorAll("#result tr").forEach((row, i) => {
+    if (i === 0) return;
+    text += [...row.children].map(td => td.innerText).join("\t") + "\n";
+  });
+  navigator.clipboard.writeText(text);
+  alert("Copied! Tinggal paste ke Excel");
 }
 </script>
 
