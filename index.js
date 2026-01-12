@@ -1,5 +1,3 @@
-ini index.js
-
 let dataArray = [];
 
 Papa.parse("data.csv", {
@@ -146,3 +144,4 @@ function downloadCSV() {
     link.click();
     document.body.removeChild(link);
 }
+
