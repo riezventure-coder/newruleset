@@ -1,169 +1,129 @@
-/*************************************************
- * GLOBAL
- *************************************************/
-let data = [];
-let selectedIdPort = "";
+/***********************
+ * GLOBAL STATE
+ ***********************/
+let csvData = [];
 
-/*************************************************
- * LOAD CSV (GITHUB PAGES FRIENDLY)
- *************************************************/
-Papa.parse("./data.csv", {
+/***********************
+ * LOAD CSV
+ ***********************/
+Papa.parse("data.csv", {
   download: true,
   header: true,
   skipEmptyLines: true,
   complete: function (results) {
-    console.log("CSV LOADED:", results.data.length);
-    data = results.data;
-
-    const btn = document.getElementById("search-btn");
-    if (btn) {
-      btn.addEventListener("click", searchData);
-    }
+    csvData = results.data;
   },
-  error: function (err) {
-    console.error("CSV LOAD ERROR:", err);
-  }
 });
 
-/*************************************************
- * SEARCH
- *************************************************/
+/***********************
+ * SEARCH BUTTON
+ ***********************/
+document.getElementById("search-btn").addEventListener("click", searchData);
+
 function searchData() {
-  const IP = document.getElementById("ip").value.trim();
-  const SLOT = document.getElementById("slot").value.trim();
-  const PORT = document.getElementById("port").value.trim();
+  const ip = document.getElementById("ip").value.trim();
+  const slot = document.getElementById("slot").value.trim();
+  const port = document.getElementById("port").value.trim();
 
-  if (!IP || !SLOT || !PORT) {
-    alert("IP, SLOT, dan PORT wajib diisi");
-    return;
-  }
+  const resultBody = document.getElementById("result-body");
+  resultBody.innerHTML = "";
 
-  const result = data.filter(d =>
-    d.IP === IP &&
-    d.SLOT === SLOT &&
-    d.PORT === PORT
+  const found = csvData.find(
+    (r) => r.IP === ip && r.SLOT === slot && r.PORT === port
   );
 
-  renderTable(result);
-}
-
-/*************************************************
- * RENDER TABLE (INI YANG KAMU CARI)
- *************************************************/
-function renderTable(rows) {
-  const tbody = document.getElementById("result-body");
-  const emptyMsg = document.getElementById("empty-msg");
-
-  tbody.innerHTML = "";
-  emptyMsg.textContent = "";
-
-  if (!rows || rows.length === 0) {
-    emptyMsg.textContent = "Tidak ada data yang ditemukan.";
+  if (!found) {
+    alert("Data tidak ditemukan");
     return;
   }
 
-  rows.forEach(item => {
-    const tr = document.createElement("tr");
+  // === RENDER TABEL ATAS ===
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${found.IP}</td>
+    <td>${found.SLOT}</td>
+    <td>${found.PORT}</td>
+    <td>${found.VLAN}</td>
+    <td>${found.ID_PORT}</td>
+    <td>${found.GPON}</td>
+    <td>${found.VENDOR}</td>
+  `;
+  resultBody.appendChild(tr);
 
-    tr.innerHTML = `
-      <td>${item.IP}</td>
-      <td>${item.SLOT}</td>
-      <td>${item.PORT}</td>
-      <td>${item.VLAN}</td>
-      <td><b>${item.ID_PORT}</b></td>
-      <td>${item.GPON}</td>
-      <td>${item.VENDOR}</td>
-    `;
+  // === AUTO GENERATE ALTER PROV ===
+  generateAlterProv(found);
+}
 
-    // 👉 LINK ID_PORT → RESOURCE_ID
-    tr.addEventListener("click", () => {
-      selectedIdPort = item.ID_PORT;
+/***********************
+ * AUTO ALTER PROV
+ ***********************/
+function generateAlterProv(data) {
+  const tbody = document.querySelector("#dataTable tbody");
+  tbody.innerHTML = "";
 
-      document.querySelectorAll(".res-id").forEach(i => {
-        i.value = selectedIdPort;
-      });
+  const idPort = data.ID_PORT;
+  const serviceName = `1-PAZ3CMG_${idPort}_INTERNET`;
 
-      document.querySelectorAll("#result-body tr").forEach(r => {
-        r.style.background = "";
-      });
-      tr.style.background = "#cce5ff";
-    });
+  // === BARIS 1: Service_Port ===
+  tbody.appendChild(createRow(idPort, serviceName, "", "Service_Port"));
 
-    tbody.appendChild(tr);
+  // === BARIS VLAN (S-Vlan) ===
+  const vlans = data.VLAN.split(",").map(v => v.trim()).filter(v => v);
+
+  vlans.forEach(vlan => {
+    tbody.appendChild(createRow(vlan, serviceName, "", "S-Vlan"));
   });
 }
 
-/*************************************************
- * ALTER PROV TABLE
- *************************************************/
-function addRow() {
-  const tbody = document.querySelector("#dataTable tbody");
+/***********************
+ * CREATE ROW
+ ***********************/
+function createRow(resourceId, serviceName, targetId, configName) {
   const tr = document.createElement("tr");
 
   tr.innerHTML = `
-    <td><input type="text" class="res-id" value="${selectedIdPort}" placeholder="RESOURCE_ID"></td>
-    <td><input type="text" class="ser-name" placeholder="SERVICE_NAME"></td>
-    <td><input type="text" class="tar-id" placeholder="TARGET_ID (kosong)"></td>
+    <td><input type="text" value="${resourceId}"></td>
+    <td><input type="text" value="${serviceName}"></td>
+    <td><input type="text" value="${targetId}"></td>
     <td>
-      <select class="cfg-name">
-        <option value="Service_Port">Service_Port</option>
-        <option value="S-Vlan">S-Vlan</option>
-        <option value="Subscriber_Terminal_Port">Subscriber_Terminal_Port</option>
-        <option value="Service_Trail">Service_Trail</option>
+      <select>
+        <option ${configName === "Service_Port" ? "selected" : ""}>Service_Port</option>
+        <option ${configName === "S-Vlan" ? "selected" : ""}>S-Vlan</option>
+        <option ${configName === "Subscriber_Terminal_Port" ? "selected" : ""}>Subscriber_Terminal_Port</option>
+        <option ${configName === "Service_Trail" ? "selected" : ""}>Service_Trail</option>
       </select>
     </td>
     <td style="text-align:center">
-      <button class="btn-remove" onclick="removeRow(this)">✕</button>
+      <button onclick="this.closest('tr').remove()">✕</button>
     </td>
   `;
 
-  tbody.appendChild(tr);
+  return tr;
 }
 
-function removeRow(btn) {
-  const tbody = document.querySelector("#dataTable tbody");
-  if (tbody.rows.length > 1) {
-    btn.closest("tr").remove();
-  } else {
-    alert("Minimal harus ada 1 baris");
-  }
-}
-
-/*************************************************
+/***********************
  * EXPORT CSV
- *************************************************/
+ ***********************/
 function downloadCSV() {
-  const rows = document.querySelectorAll("#dataTable tr");
-  let csv = "";
+  const rows = [];
+  rows.push(["RESOURCE_ID", "SERVICE_NAME", "TARGET_ID", "CONFIG_ITEM_NAME"]);
 
-  rows.forEach((row, idx) => {
-    const cols = row.querySelectorAll("th, td");
-    let line = [];
-
-    for (let i = 0; i < cols.length - 1; i++) {
-      let val = "";
-
-      if (idx === 0) {
-        val = cols[i].innerText;
-      } else {
-        const el = cols[i].querySelector("input, select");
-        val = el ? el.value : "";
-      }
-
-      val = val.replace(/"/g, '""');
-      line.push(`"${val}"`);
-    }
-
-    csv += line.join(",") + "\n";
+  document.querySelectorAll("#dataTable tbody tr").forEach(tr => {
+    const tds = tr.querySelectorAll("td");
+    rows.push([
+      tds[0].querySelector("input").value,
+      tds[1].querySelector("input").value,
+      tds[2].querySelector("input").value,
+      tds[3].querySelector("select").value,
+    ]);
   });
 
+  const csv = Papa.unparse(rows);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
 
+  const a = document.createElement("a");
   a.href = url;
-  a.download = "Alter_Service_Config_Item.csv";
-  document.body.appendChild(a);
+  a.download = "alter_prov.csv";
   a.click();
-  document.body.removeChild(a);
 }
