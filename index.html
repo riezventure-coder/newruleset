@@ -42,11 +42,6 @@ function proses() {
   const slot = document.getElementById("slot").value.trim();
   const port = document.getElementById("port").value.trim();
 
-  if (!crm || !ip || !slot || !port) {
-    alert("Lengkapi semua input");
-    return;
-  }
-
   const service = {
     INTERNET: crm.includes("_INTERNET"),
     VOICE: crm.includes("_VOICE"),
@@ -60,20 +55,21 @@ function proses() {
       const rows = json.table.rows;
 
       const data = rows.find(r =>
-        r.c[0]?.v == ip &&
-        r.c[1]?.v == slot &&
-        r.c[2]?.v == port
+        r.c[0]?.v.toString() === ip &&
+        r.c[1]?.v.toString() === slot &&
+        r.c[2]?.v.toString() === port
       );
 
       if (!data) {
-        alert("IP SLOT PORT tidak ditemukan");
+        alert("DATA TIDAK DITEMUKAN DI GOOGLE SHEET");
         return;
       }
 
-      const idPort = data.c[4].v;
-      const vlan = data.c[3].v.split(",");
-      const svlanInternet = vlan[0]?.trim();
-      const svlanVoice = vlan[1]?.trim();
+      const idPort = data.c[4].v.toString();
+      const vlanArr = data.c[3].v.toString().split(",");
+
+      const svlanInternet = vlanArr[0]?.trim();
+      const svlanVoice = vlanArr[1]?.trim();
 
       const tbl = document.getElementById("out");
       tbl.innerHTML = `
