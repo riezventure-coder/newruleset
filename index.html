@@ -67,11 +67,11 @@ function generate() {
     return;
   }
 
-  const row = sheetData.find(r =>
-    r.IP === ip &&
-    r.SLOT == slot &&
-    r.PORT == port
-  );
+ const row = sheetData.find(r =>
+  String(r.IP).trim() === ip &&
+  String(r.SLOT).trim() === slot &&
+  String(r.PORT).trim() === port
+);
 
   if (!row) {
     alert("Data PORT tidak ditemukan");
@@ -140,3 +140,4 @@ function copyTable() {
 
 </body>
 </html>
+
