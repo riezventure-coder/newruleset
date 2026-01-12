@@ -1,42 +1,9 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<title>Ruleset Generator</title>
-<style>
-body { font-family: Arial; padding: 20px }
-textarea { width: 100%; height: 120px }
-input { margin: 5px; padding: 5px }
-button { padding: 10px; margin-top: 10px }
-table { border-collapse: collapse; margin-top: 20px }
-th, td { border: 1px solid #000; padding: 6px }
-</style>
-</head>
-<body>
-
-<h2>Ruleset Generator (CRM + Google Sheets)</h2>
-
-<textarea id="crmText" placeholder="Paste text CRM di sini"></textarea>
-
-<br>
-IP <input id="ip">
-SLOT <input id="slot">
-PORT <input id="port">
-
-<br>
-<button onclick="processData()">PROSES</button>
-
-<table id="result">
-  <tr>
-    <th>RESOURCE_ID</th>
-    <th>SERVICE_NAME</th>
-    <th>TARGET_ID</th>
-    <th>CONFIG_ITEM_NAME</th>
-  </tr>
-</table>
-
 <script>
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUzTtaRANBaWfV3cnPwGxMxdI4ZYePm3IgBsVQ8t6Ho8rBZEPU3O-ZpqdK5sQYbXHqBsaClqtzk-0y/pub?gid=0&single=true&output=csv";
+
+function clean(val) {
+  return val ? val.replace(/^"+|"+$/g, "").trim() : "";
+}
 
 async function processData() {
   try {
@@ -53,14 +20,15 @@ async function processData() {
       services[m[1]] = true;
     }
 
-    // === FETCH GOOGLE SHEETS ===
+    // === LOAD GOOGLE SHEETS ===
     const res = await fetch(SHEET_URL);
     if (!res.ok) throw new Error("Gagal load Google Sheets");
 
     const csv = await res.text();
-    const rows = csv.trim().split("\n").map(r =>
-      r.replace("\r","").split(",").map(c => c.trim())
-    );
+    const rows = csv
+      .trim()
+      .split("\n")
+      .map(r => r.replace("\r","").split(",").map(clean));
 
     const header = rows[0];
     const data = rows.slice(1);
@@ -69,6 +37,7 @@ async function processData() {
       IP: header.indexOf("IP"),
       SLOT: header.indexOf("SLOT"),
       PORT: header.indexOf("PORT"),
+      VLAN: header.indexOf("VLAN"),
       ID_PORT: header.indexOf("ID_PORT")
     };
 
@@ -83,6 +52,10 @@ async function processData() {
       return;
     }
 
+    const idPort = olt[idx.ID_PORT]; // ⬅ FIX: ini sekarang benar
+    const [svlanInternet, svlanVoice] =
+      (olt[idx.VLAN] || "").split(",").map(clean);
+
     const table = document.getElementById("result");
     table.innerHTML = `
       <tr>
@@ -93,31 +66,36 @@ async function processData() {
       </tr>
     `;
 
-    ["INTERNET","VOICE","IPTV"].forEach(service => {
-      if (!services[service]) return;
-
-      // Service_Port
+    // INTERNET
+    if (services.INTERNET) {
       table.innerHTML += `
-        <tr>
-          <td>${olt[idx.ID_PORT]}</td>
-          <td>${service}</td>
-          <td></td>
-          <td>Service_Port</td>
-        </tr>
+        <tr><td>${idPort}</td><td>INTERNET</td><td></td><td>Service_Port</td></tr>
       `;
-
-      // S-Vlan hanya Internet & Voice
-      if (service !== "IPTV") {
+      if (svlanInternet) {
         table.innerHTML += `
-          <tr>
-            <td>${olt[idx.ID_PORT]}</td>
-            <td>${service}</td>
-            <td></td>
-            <td>S-Vlan</td>
-          </tr>
+          <tr><td>${svlanInternet}</td><td>INTERNET</td><td></td><td>S-Vlan</td></tr>
         `;
       }
-    });
+    }
+
+    // VOICE
+    if (services.VOICE) {
+      table.innerHTML += `
+        <tr><td>${idPort}</td><td>VOICE</td><td></td><td>Service_Port</td></tr>
+      `;
+      if (svlanVoice) {
+        table.innerHTML += `
+          <tr><td>${svlanVoice}</td><td>VOICE</td><td></td><td>S-Vlan</td></tr>
+        `;
+      }
+    }
+
+    // IPTV
+    if (services.IPTV) {
+      table.innerHTML += `
+        <tr><td>${idPort}</td><td>IPTV</td><td></td><td>Service_Port</td></tr>
+      `;
+    }
 
   } catch (err) {
     alert("ERROR: " + err.message);
@@ -125,6 +103,3 @@ async function processData() {
   }
 }
 </script>
-
-</body>
-</html>
