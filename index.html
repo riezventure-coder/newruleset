@@ -18,9 +18,9 @@ th,td { border:1px solid #000; padding:6px }
 
 <textarea id="crm" placeholder="Paste text CRM di sini"></textarea><br>
 
-IP <input id="ip">
-SLOT <input id="slot">
-PORT <input id="port">
+IP <input id="ip" placeholder="172.24.155.4">
+SLOT <input id="slot" placeholder="1">
+PORT <input id="port" placeholder="0">
 <button onclick="proses()">PROSES</button>
 
 <table id="out">
@@ -42,6 +42,11 @@ function proses() {
   const slot = document.getElementById("slot").value.trim();
   const port = document.getElementById("port").value.trim();
 
+  if (!crm || !ip || !slot || !port) {
+    alert("Lengkapi semua input");
+    return;
+  }
+
   const service = {
     INTERNET: crm.includes("_INTERNET"),
     VOICE: crm.includes("_VOICE"),
@@ -55,17 +60,17 @@ function proses() {
       const rows = json.table.rows;
 
       const data = rows.find(r =>
-        r.c[0]?.v.toString() === ip &&
-        r.c[1]?.v.toString() === slot &&
-        r.c[2]?.v.toString() === port
+        r.c[0]?.v.toString().trim() == ip &&
+        r.c[1]?.v.toString().trim() == slot &&
+        r.c[2]?.v.toString().trim() == port
       );
 
       if (!data) {
-        alert("DATA TIDAK DITEMUKAN DI GOOGLE SHEET");
+        alert("DATA TIDAK DITEMUKAN (IP SLOT PORT)");
         return;
       }
 
-      const idPort = data.c[4].v.toString();
+      const idPort = data.c[4].v.toString().trim();
       const vlanArr = data.c[3].v.toString().split(",");
 
       const svlanInternet = vlanArr[0]?.trim();
@@ -96,6 +101,10 @@ function proses() {
         tbl.innerHTML += `
           <tr><td>${idPort}</td><td>IPTV</td><td></td><td>Service_Port</td></tr>`;
       }
+    })
+    .catch(err => {
+      alert("ERROR load Google Sheet");
+      console.error(err);
     });
 }
 </script>
