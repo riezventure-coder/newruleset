@@ -145,5 +145,48 @@ function downloadCSV() {
     document.body.removeChild(link);
 }
 
+//-- Fungsi untuk Mengambil Service dari BIMA
+
+document.getElementById('btnExtract').addEventListener('click', function() {
+    const input = document.getElementById('inputText').value;
+    const outputList = document.getElementById('outputList');
+    const resultArea = document.getElementById('resultArea');
+
+    const keyword = "Service ID is ";
+    let targetText = input.includes(keyword) ? input.split(keyword)[1] : input;
+    const services = targetText.trim().split(',');
+
+    outputList.innerHTML = ""; 
+
+    if (services.length > 0 && services[0] !== "") {
+        resultArea.classList.remove('hidden');
+        services.forEach(item => {
+            const cleanItem = item.trim();
+            if (cleanItem !== "") {
+                const div = document.createElement('div');
+                div.className = 'service-card';
+                div.innerHTML = `
+                    <span>${cleanItem}</span>
+                    <button class="copy-btn" onclick="copyText('${cleanItem}')" title="Salin">
+                        <i data-lucide="copy" style="width:16px; height:16px"></i>
+                    </button>
+                `;
+                outputList.appendChild(div);
+            }
+        });
+        lucide.createIcons(); // Re-render icon lucide
+    } else {
+        alert("Mohon masukkan data yang valid.");
+    }
+});
+
+// Fungsi Global untuk Copy
+window.copyText = function(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Berhasil disalin: " + text);
+    });
+};
+
+
 
 
