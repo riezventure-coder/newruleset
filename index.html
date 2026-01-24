@@ -72,9 +72,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="index.js"></script>
 
+    <section class="card animate-up" style="animation-delay: 0.1s;">
+                <div class="card-header-sm">
+                    <i data-lucide="terminal" class="text-green"></i>
+                    <h2>Service Selector</h2>
+                </div>
+                <div class="extractor-mini">
+                    <textarea id="inputText" placeholder="Paste Detail BIMA..."></textarea>
+                    <button id="btnExtract" class="btn-secondary-sm">Generate</button>
+                </div>
+                <div id="resultArea" class="result-area hidden">
+                    <div id="outputList" class="compact-output"></div>
+                </div>
+            </section>
+        </div>
 			
   </body>
 </html>
+
 
 
 
